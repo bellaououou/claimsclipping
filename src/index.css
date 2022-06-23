@@ -1,13 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+@layer base {
+  p {
+    @apply text-base text-black;
+  }
+}
+
+@layer components {
+  .label {
+    @apply uppercase text-body_grey text-sm font-semibold;
+  }
+
+  .small-tag {
+    @apply text-xs uppercase text-black font-semibold bg-primary_light px-2 py-1 rounded-sm;
+  }
+}
+
+.react-pdf__Document {
+  @apply m-auto  drop-shadow rounded;
+}
+
+/* .react-pdf__Page canvas {
+  @apply m-auto shadow !w-full !h-auto rounded;
+}
+.react-pdf__Page__textContent {
+  @apply m-auto shadow !w-full !h-auto rounded;
+} */

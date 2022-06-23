@@ -1,25 +1,37 @@
-import logo from './logo.svg';
-import './App.css';
+import "./App.css";
 
-function App() {
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Test from "./pages/Test";
+import { Auth0Provider } from "@auth0/auth0-react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import RequireAuth from "./components/RequireAuth";
+
+const App = () => {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <Auth0Provider
+        domain="dev-i0roppevd.au.auth0.com"
+        clientId="YjgUOSLqg9hSM33DC3XwRl3HKrmDMyEP"
+        redirectUri={window.location.origin}
+      >
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                // <RequireAuth>
+                <Home />
+                // </RequireAuth>
+              }
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/test" element={<Test />} />
+          </Routes>
+        </BrowserRouter>
+      </Auth0Provider>
     </div>
   );
-}
+};
 
 export default App;
