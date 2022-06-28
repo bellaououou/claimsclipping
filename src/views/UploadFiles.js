@@ -45,6 +45,14 @@ const UploadFiles = ({ ChangeStep }) => {
           }, 5000);
         } else {
           const num = await GetPdfPageNum(file);
+          const pagesConditionsArray = new Array(num)
+            .fill([])
+            .map((_, index) => {
+              return {
+                pageId: uniqid(),
+                conditions: [],
+              };
+            });
           files.updateFiles([
             ...files.getFiles,
             {
@@ -52,7 +60,8 @@ const UploadFiles = ({ ChangeStep }) => {
               num: num,
               name: file.name,
               id: uniqid(),
-              pagesConditions: new Array(num).fill([]),
+              // pagesConditions: new Array(num).fill([]),
+              pagesConditions: pagesConditionsArray,
             },
           ]);
         }
@@ -152,7 +161,7 @@ const UploadFiles = ({ ChangeStep }) => {
                 ChangeStep(1);
                 files.updateActiveFile({
                   fileId: files.getFiles[0].id,
-                  pageIndex: 0,
+                  pageId: files.getFiles[0].pagesConditions[0].pageId,
                 });
               }}
             >

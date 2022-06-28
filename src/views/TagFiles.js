@@ -6,7 +6,7 @@ import { PDFDocument } from "pdf-lib";
 
 import { Button, Alert } from "@mui/material";
 
-import fileToArrayBuffer from "../functions/FileToArrayBuffer";
+import FileToArrayBuffer from "../functions/FileToArrayBuffer";
 
 import uniqid from "uniqid";
 
@@ -26,7 +26,10 @@ const TagFiles = observer(({ ChangeStep }) => {
     files.getCurrentPageConditions
   );
   const [newConditions, setNewConditions] = useState([]);
-  console.log(toJS(files.getActiveFile));
+
+  // test
+  const [test, setTest] = useState("");
+  // end test
   useEffect(() => {}, []);
 
   // function onDocumentLoadSuccess(pdf, index) {
@@ -34,23 +37,60 @@ const TagFiles = observer(({ ChangeStep }) => {
   //   // setNumPages(pdf.numPages);
   // }
 
-  const FileNameClick = (id) => {
-    files.updateActiveFile({ fileId: id, pageIndex: 0 });
-    resetConditions();
+  const FileNameClick = (fileId, pageId) => {
+    files.updateActiveFile({ fileId: fileId, pageId: pageId });
+    ResetConditions();
   };
 
-  const PageClick = (index) => {
-    files.updateActiveFile({ ...files.activeFileIndex, pageIndex: index });
-    resetConditions();
+  const PageClick = (pageId) => {
+    files.updateActiveFile({
+      ...files.activeFileIndex,
+      pageId: pageId,
+    });
+    ResetConditions();
   };
 
-  const resetConditions = () => {
+  const ResetConditions = () => {
     if (files.getCurrentPageConditions.length > 0) {
       setSelectConditionOptions(files.getCurrentPageConditions);
     } else {
       setSelectConditionOptions([]);
     }
     setNewConditions([]);
+  };
+
+  const DownloadPdfs = async () => {
+    let pdfOutputs = [];
+
+    await Promise.all(
+      files.getExportFilesArray.map(async (condition) => {
+        // final output pdf
+        const pdfOutput = await PDFDocument.create();
+        pdfOutput.setTitle(condition.conditionName);
+        await Promise.all(
+          condition.includedFiles.map(async (file) => {
+            // input pdfs
+            const existingPdfBytes = await FileToArrayBuffer(file.file);
+            const pdfDoc = await PDFDocument.load(existingPdfBytes, {
+              ignoreEncryption: true,
+            });
+            await Promise.all(
+              file.pages.map(async (page) => {
+                const [existingPage] = await pdfOutput.copyPages(pdfDoc, [
+                  files.getPageByPageAndFileId(file.fileId, page),
+                ]);
+                pdfOutput.addPage(existingPage);
+              })
+            );
+          })
+        );
+
+        const pdfOutputUri = await pdfOutput.saveAsBase64({ dataUri: true });
+        setTest(pdfOutputUri);
+        pdfOutputs = [...pdfOutputs, pdfOutputUri];
+      })
+    );
+    console.log(pdfOutputs);
   };
 
   return (
@@ -72,7 +112,7 @@ const TagFiles = observer(({ ChangeStep }) => {
                         file.id === files.getActiveFile.id && `bg-primary_light`
                       }`}
                       onClick={() => {
-                        FileNameClick(file.id);
+                        FileNameClick(file.id, file.pagesConditions[0].pageId);
                       }}
                       key={index}
                     >
@@ -87,19 +127,21 @@ const TagFiles = observer(({ ChangeStep }) => {
           {/* pages */}
           <div className="px-9 py-5 h-[70vh]">
             <p className="label flex items-center gap-x-2">
-              Pages <span className="small-tag">{files.getActiveFile.num}</span>
+              Pages{" "}
+              <span className="small-tag">{files.getActiveFilePageCount}</span>
             </p>
             <div className="mt-5 grid grid-cols-[minmax(0,5fr)_minmax(0,5fr)]  justify-items-center h-[60vh] items-start overflow-y-scroll">
-              {[...Array(files.getActiveFile.num)].map((_, index) => {
+              {files.getActiveFile.pagesConditions.map((page, index) => {
                 return (
                   <div
                     className={`hover:bg-primary_light rounded pt-4 pb-3 px-2 cursor-pointer ${
-                      index === files.getActiveFileIndex("pageIndex") &&
+                      page.pageId === files.getActivePageId &&
                       `bg-primary_light`
                     }`}
                     key={index}
                     onClick={() => {
-                      PageClick(index);
+                      PageClick(page.pageId);
+                      console.log(page.pageId);
                     }}
                   >
                     <Document
@@ -138,7 +180,7 @@ const TagFiles = observer(({ ChangeStep }) => {
             </div>
             {/* <p className="label mb-5 text-center">
               {files.getActiveFile.name} / Page{" "}
-              {files.getActiveFileIndex("pageIndex") + 1}
+              {files.getActivePageArrayIndex + 1}
             </p> */}
             <div className="w-[70%] mx-auto">
               <Document
@@ -147,7 +189,7 @@ const TagFiles = observer(({ ChangeStep }) => {
                 // onLoadSuccess={onDocumentLoadSuccess}
               >
                 <Page
-                  pageIndex={files.getActiveFileIndex("pageIndex")}
+                  pageIndex={files.getActivePageArrayIndex}
                   width={500}
                   renderMode="svg"
                 />
@@ -155,26 +197,34 @@ const TagFiles = observer(({ ChangeStep }) => {
                 <div className="absolute left-[50%] bottom-5 translate-x-[-50%] drop-shadow rounded overflow-hidden bg-white flex items-center">
                   <button
                     type="button"
-                    disabled={files.getActiveFileIndex("pageIndex") <= 0}
+                    disabled={files.getActivePageArrayIndex <= 0}
                     onClick={() => {
-                      PageClick(files.getActiveFileIndex("pageIndex") - 1);
+                      PageClick(
+                        files.getActiveFile.pagesConditions[
+                          files.getActivePageArrayIndex - 1
+                        ].pageId
+                      );
                     }}
                     className="p-3 cursor-pointer disabled:opacity-30 "
                   >
                     <FeatherIcon icon="chevron-left" size={18} />
                   </button>
                   <p className="border-l border-border_grey border-r px-3 py-2">
-                    {files.getActiveFileIndex("pageIndex") + 1} of{" "}
-                    {files.getActiveFile.num || "--"}
+                    {files.getActivePageArrayIndex + 1} of{" "}
+                    {files.getActiveFilePageCount || "--"}
                   </p>
                   <button
                     type="button"
                     disabled={
-                      files.getActiveFileIndex("pageIndex") >=
-                      files.getActiveFile.num - 1
+                      files.getActivePageArrayIndex >=
+                      files.getActiveFilePageCount - 1
                     }
                     onClick={() => {
-                      PageClick(files.getActiveFileIndex("pageIndex") + 1);
+                      PageClick(
+                        files.getActiveFile.pagesConditions[
+                          files.getActivePageArrayIndex + 1
+                        ].pageId
+                      );
                     }}
                     className="p-3 cursor-pointer disabled:opacity-30"
                   >
@@ -261,25 +311,45 @@ const TagFiles = observer(({ ChangeStep }) => {
               )}
             </div>
             {/* end list */}
+            <iframe src={test}></iframe>
+            <a href={test} download>
+              download
+            </a>
           </div>
+
           <div className="absolute left-9 bottom-7 w-[calc(100%_-_4.5rem)]">
-            <Button
-              variant="contained"
-              fullWidth
-              size="large"
-              onClick={() => {
-                console.log(selectConditionOptions);
-                console.log(newConditions);
-                conditions.updateConditions([
-                  ...conditions.getConditions,
-                  ...newConditions,
-                ]);
-                files.updateActiveFileConditions(selectConditionOptions);
-                resetConditions();
-              }}
-            >
-              Save Conditions
-            </Button>
+            <div>
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                onClick={() => {
+                  conditions.updateConditions([
+                    ...conditions.getConditions,
+                    ...newConditions,
+                  ]);
+                  files.updateActiveFileConditions(selectConditionOptions);
+                  ResetConditions();
+                }}
+              >
+                Save Conditions
+              </Button>
+            </div>
+
+            <div className="mt-2">
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                onClick={() => {
+                  console.log(toJS(files.getFiles));
+                  console.log(files.getExportFilesArray);
+                  DownloadPdfs();
+                }}
+              >
+                Export Documents
+              </Button>
+            </div>
           </div>
         </div>
       </div>
