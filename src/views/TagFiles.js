@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Document, Page } from "react-pdf/dist/esm/entry.webpack5";
 import Dropzone from "react-dropzone";
 import FeatherIcon from "feather-icons-react";
@@ -8,49 +8,49 @@ import { Button, Alert } from "@mui/material";
 
 import fileToArrayBuffer from "../functions/FileToArrayBuffer";
 
-// DEMO DATA
-import DemoPDF from "../docs/demo.pdf";
-import DemoPDF2 from "../docs/sample.pdf";
-import { act } from "react-dom/test-utils";
-import { upload } from "@testing-library/user-event/dist/upload";
+import uniqid from "uniqid";
 
-const DataArray = [
-  {
-    file: DemoPDF,
-    num: 2,
-    name: "demo.pdf",
-  },
-  {
-    file: DemoPDF2,
-    num: 2,
-    name: "demo2.pdf",
-  },
-  {
-    file: DemoPDF,
-    num: 1,
-    name: "demo3.pdf",
-  },
-];
-// END DEMO
+// mobx
+import { toJS } from "mobx";
+import { files } from "../mobx/files";
+import { conditions } from "../mobx/conditions";
+import { observer } from "mobx-react";
 
-const TagFiles = () => {
-  const [uploadFiles, setUploadFiles] = useState(DataArray);
-  const [activeFile, setActiveFile] = useState({
-    fileIndex: 0,
-    pageIndex: 0,
-  });
+// select
+import Select from "react-select";
+import Creatable, { useCreatable } from "react-select/creatable";
+import CreatableSelect from "react-select/creatable";
 
-  function onDocumentLoadSuccess(pdf, index) {
-    // console.log(index);
-    // setNumPages(pdf.numPages);
-  }
+const TagFiles = observer(({ ChangeStep }) => {
+  const [selectConditionOptions, setSelectConditionOptions] = useState(
+    files.getCurrentPageConditions
+  );
+  const [newConditions, setNewConditions] = useState([]);
+  console.log(toJS(files.getActiveFile));
+  useEffect(() => {}, []);
 
-  const FileNameClick = (index) => {
-    setActiveFile({ fileIndex: index, pageIndex: 0 });
+  // function onDocumentLoadSuccess(pdf, index) {
+  //   // console.log(index);
+  //   // setNumPages(pdf.numPages);
+  // }
+
+  const FileNameClick = (id) => {
+    files.updateActiveFile({ fileId: id, pageIndex: 0 });
+    resetConditions();
   };
 
   const PageClick = (index) => {
-    setActiveFile({ ...activeFile, pageIndex: index });
+    files.updateActiveFile({ ...files.activeFileIndex, pageIndex: index });
+    resetConditions();
+  };
+
+  const resetConditions = () => {
+    if (files.getCurrentPageConditions.length > 0) {
+      setSelectConditionOptions(files.getCurrentPageConditions);
+    } else {
+      setSelectConditionOptions([]);
+    }
+    setNewConditions([]);
   };
 
   return (
@@ -58,21 +58,23 @@ const TagFiles = () => {
       <div className="grid grid-cols-[minmax(0,25fr)_minmax(0,45fr)_minmax(0,30fr)] h-[100vh]">
         <div className="bg-light_grey ">
           {/* documents */}
-          <div className="px-9 pt-9 pb-2 border-b border-b-border_grey h-[30vh]">
+          <div className="px-9 pt-5 pb-2 border-b border-b-border_grey h-[30vh] ">
             <p className="label flex items-center gap-x-2">
-              Documents <span className="small-tag">6</span>
+              Documents{" "}
+              <span className="small-tag">{files.getFiles.length}</span>
             </p>
             <div className="mt-5  max-h-[20vh] overflow-y-scroll">
-              {uploadFiles &&
-                uploadFiles.map((file, index) => {
+              {files.getFiles &&
+                files.getFiles.map((file, index) => {
                   return (
                     <p
                       className={`py-1 px-4  rounded hover:bg-primary_light transition-all cursor-pointer my-1 ${
-                        index === activeFile.fileIndex && `bg-primary_light`
+                        file.id === files.getActiveFile.id && `bg-primary_light`
                       }`}
                       onClick={() => {
-                        FileNameClick(index);
+                        FileNameClick(file.id);
                       }}
+                      key={index}
                     >
                       {file.name}
                     </p>
@@ -83,67 +85,206 @@ const TagFiles = () => {
           {/* end documents */}
 
           {/* pages */}
-          <div className="px-9 py-9 h-[70vh]">
+          <div className="px-9 py-5 h-[70vh]">
             <p className="label flex items-center gap-x-2">
-              Pages <span className="small-tag">10</span>
+              Pages <span className="small-tag">{files.getActiveFile.num}</span>
             </p>
             <div className="mt-5 grid grid-cols-[minmax(0,5fr)_minmax(0,5fr)]  justify-items-center h-[60vh] items-start overflow-y-scroll">
-              {[...Array(uploadFiles[activeFile.fileIndex].num)].map(
-                (_, index) => {
-                  return (
-                    <div
-                      className={`hover:bg-primary_light rounded pt-4 pb-3 px-2 cursor-pointer ${
-                        index === activeFile.pageIndex && `bg-primary_light`
-                      }`}
-                      key={index}
-                      onClick={() => {
-                        PageClick(index);
-                      }}
+              {[...Array(files.getActiveFile.num)].map((_, index) => {
+                return (
+                  <div
+                    className={`hover:bg-primary_light rounded pt-4 pb-3 px-2 cursor-pointer ${
+                      index === files.getActiveFileIndex("pageIndex") &&
+                      `bg-primary_light`
+                    }`}
+                    key={index}
+                    onClick={() => {
+                      PageClick(index);
+                    }}
+                  >
+                    <Document
+                      file={files.getActiveFile.file}
+                      // onLoadSuccess={onDocumentLoadSuccess}
+                      className="relative mx-auto"
                     >
-                      <Document
-                        file={uploadFiles[activeFile.fileIndex].file}
-                        onLoadSuccess={onDocumentLoadSuccess}
-                        className="relative mx-auto"
-                      >
-                        <Page pageIndex={index} width={140} />
-                        <span className="small-tag absolute right-3 bottom-3">
-                          6
-                        </span>
-                      </Document>
+                      <Page pageIndex={index} width={140} />
+                      <span className="small-tag absolute right-3 bottom-3">
+                        6
+                      </span>
+                    </Document>
 
-                      <p className="text-center mt-1">Page {index + 1}</p>
-                    </div>
-                  );
-                }
-              )}
+                    <p className="text-center mt-1">Page {index + 1}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
           {/* end pages */}
         </div>
-        <div className="bg-white py-9 px-9 ">
+        <div className="bg-white px-9 pt-6 pb-9">
           <div className="">
-            <p className="label mb-10">
-              {uploadFiles[activeFile.fileIndex].name} / Page{" "}
-              {activeFile.pageIndex + 1}
-            </p>
+            <div
+              className="flex items-center cursor-pointer mb-10"
+              onClick={() => {
+                ChangeStep(0);
+              }}
+            >
+              <FeatherIcon
+                icon="chevron-left"
+                size={20}
+                className="text-body_grey pr-1"
+              />
+              <p className="label">Back to upload</p>
+            </div>
+            {/* <p className="label mb-5 text-center">
+              {files.getActiveFile.name} / Page{" "}
+              {files.getActiveFileIndex("pageIndex") + 1}
+            </p> */}
             <div className="w-[70%] mx-auto">
               <Document
-                file={uploadFiles[activeFile.fileIndex].file}
-                onLoadSuccess={onDocumentLoadSuccess}
+                file={files.getActiveFile.file}
+                className="relative"
+                // onLoadSuccess={onDocumentLoadSuccess}
               >
                 <Page
-                  pageIndex={activeFile.pageIndex}
+                  pageIndex={files.getActiveFileIndex("pageIndex")}
                   width={500}
                   renderMode="svg"
                 />
+
+                <div className="absolute left-[50%] bottom-5 translate-x-[-50%] drop-shadow rounded overflow-hidden bg-white flex items-center">
+                  <button
+                    type="button"
+                    disabled={files.getActiveFileIndex("pageIndex") <= 0}
+                    onClick={() => {
+                      PageClick(files.getActiveFileIndex("pageIndex") - 1);
+                    }}
+                    className="p-3 cursor-pointer disabled:opacity-30 "
+                  >
+                    <FeatherIcon icon="chevron-left" size={18} />
+                  </button>
+                  <p className="border-l border-border_grey border-r px-3 py-2">
+                    {files.getActiveFileIndex("pageIndex") + 1} of{" "}
+                    {files.getActiveFile.num || "--"}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={
+                      files.getActiveFileIndex("pageIndex") >=
+                      files.getActiveFile.num - 1
+                    }
+                    onClick={() => {
+                      PageClick(files.getActiveFileIndex("pageIndex") + 1);
+                    }}
+                    className="p-3 cursor-pointer disabled:opacity-30"
+                  >
+                    <FeatherIcon icon="chevron-right" size={18} />
+                  </button>
+                </div>
               </Document>
             </div>
           </div>
         </div>
-        <div className="bg-light_grey "></div>
+        <div className="bg-light_grey py-9 relative ">
+          <div className="max-h-[90vh] overflow-y-scroll pb-[80px] h-full">
+            <div className="px-9">
+              <CreatableSelect
+                isClearable={false}
+                placeholder="Select Conditions"
+                options={conditions.getConditions}
+                isMulti={true}
+                value={selectConditionOptions}
+                onCreateOption={(value) => {
+                  setSelectConditionOptions((selectConditionOptions) => [
+                    ...selectConditionOptions,
+                    {
+                      value: uniqid(),
+                      label: value,
+                    },
+                  ]);
+                  setNewConditions((newConditions) => [
+                    ...newConditions,
+                    {
+                      value: uniqid(),
+                      label: value,
+                    },
+                  ]);
+                }}
+                onChange={(value) => {
+                  // conditions.updateConditions([
+                  //   ...conditions.getConditions,
+                  //   { value: uniqid(), label: value },
+                  // ]);
+                  setSelectConditionOptions(value);
+                  // setSelectConditionOptions({
+                  //   value: "werwer",
+                  //   label: value,
+                  // });
+                  console.log(value);
+                }}
+              />
+            </div>
+            {/* list */}
+            <div className="mt-8  pl-9 pr-6">
+              <p className="label">Conditions</p>
+              {selectConditionOptions.length > 0 ? (
+                selectConditionOptions.map((condition, index) => {
+                  return (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center border-b-border_grey border-b py-3"
+                    >
+                      <p className="max-w-[calc(100%_-_3rem)]">
+                        {condition.label}
+                      </p>
+                      <div
+                        className="bg-primary_light rounded-full w-[2rem] h-[2rem] flex justify-center items-center cursor-pointer"
+                        onClick={() => {
+                          setSelectConditionOptions(
+                            selectConditionOptions.filter(
+                              (x) => x.value !== condition.value
+                            )
+                          );
+                        }}
+                      >
+                        <FeatherIcon
+                          icon="x"
+                          size={14}
+                          className="text-primary"
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="mt-3">Select condtion from the field on top.</p>
+              )}
+            </div>
+            {/* end list */}
+          </div>
+          <div className="absolute left-9 bottom-7 w-[calc(100%_-_4.5rem)]">
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={() => {
+                console.log(selectConditionOptions);
+                console.log(newConditions);
+                conditions.updateConditions([
+                  ...conditions.getConditions,
+                  ...newConditions,
+                ]);
+                files.updateActiveFileConditions(selectConditionOptions);
+                resetConditions();
+              }}
+            >
+              Save Conditions
+            </Button>
+          </div>
+        </div>
       </div>
     </>
   );
-};
+});
 
 export default TagFiles;

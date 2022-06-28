@@ -6,21 +6,23 @@ import DemoPDF from "../docs/sample.pdf";
 import UploadFiles from "../views/UploadFiles";
 import TagFiles from "../views/TagFiles";
 
-const Home = () => {
-  const [numPages, setNumPages] = useState(null);
-  const [pageNumber, setPageNumber] = useState(2);
+// mobx
+import { toJS } from "mobx";
+import { files } from "../mobx/files";
+import { observer } from "mobx-react";
 
-  function onDocumentLoadSuccess(pdf) {
-    console.log(pdf);
-    setNumPages(pdf.numPages);
-  }
+const Home = () => {
+  const [step, setStep] = useState(1);
+
+  const ChangeStep = (step) => {
+    setStep(step);
+  };
 
   return (
     <>
-      {/* <UploadFiles /> */}
-      <TagFiles />
+      {step == 0 && <UploadFiles ChangeStep={ChangeStep} />}
+      {step == 1 && <TagFiles ChangeStep={ChangeStep} />}
     </>
   );
 };
-
 export default Home;

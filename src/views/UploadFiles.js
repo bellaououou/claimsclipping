@@ -3,16 +3,22 @@ import { Document, Page } from "react-pdf/dist/esm/entry.webpack5";
 import Dropzone from "react-dropzone";
 import FeatherIcon from "feather-icons-react";
 import { PDFDocument } from "pdf-lib";
+import uniqid from "uniqid";
 
 import { Button, Alert } from "@mui/material";
 
 import FileToArrayBuffer from "../functions/FileToArrayBuffer";
 
+// mobx
+import { toJS } from "mobx";
+import { files } from "../mobx/files";
+import { observer } from "mobx-react";
+
 // const RemoveCurrentList = (currentFile, uploadFiles, setUploadFiles) => {
 //   setUploadFiles(uploadFiles.filter((file) => file.file !== currentFile));
 // };
 
-const UploadFiles = () => {
+const UploadFiles = ({ ChangeStep }) => {
   const [uploadFiles, setUploadFiles] = useState([]);
   const [duplicateFile, setDuplicateFile] = useState({
     duplicate: false,
@@ -29,33 +35,36 @@ const UploadFiles = () => {
     return pages.length;
   };
 
-  //   const [openSnackbar, setOpenSnackbar] = useState(false);
   const DisplayPdfList = useCallback(
     (acceptedFiles) => {
       acceptedFiles.forEach(async (file, index) => {
-        if (uploadFiles.some((e) => e.name === file.name)) {
+        if (files.getFiles.some((e) => e.name === file.name)) {
           setDuplicateFile({ name: file.name, duplicate: true });
           setTimeout(() => {
             setDuplicateFile({ ...duplicateFile, duplicate: false });
           }, 5000);
         } else {
           const num = await GetPdfPageNum(file);
-          setUploadFiles((uploadFiles) => [
-            ...uploadFiles,
+          files.updateFiles([
+            ...files.getFiles,
             {
               file: file,
               num: num,
               name: file.name,
+              id: uniqid(),
+              pagesConditions: new Array(num).fill([]),
             },
           ]);
         }
       });
     },
-    [uploadFiles, setDuplicateFile, GetPdfPageNum, setUploadFiles]
+    [setDuplicateFile, GetPdfPageNum, files]
   );
 
   const RemoveCurrentList = (currentFile) => {
-    setUploadFiles(uploadFiles.filter((file) => file.file !== currentFile));
+    files.updateFiles(
+      files.getFiles.filter((file) => file.file !== currentFile)
+    );
   };
 
   const CloseDuplicateMessage = () => {
@@ -105,8 +114,8 @@ const UploadFiles = () => {
         <div className="px-9 py-9 relative pb-20">
           <p className="label">Documents</p>
           <div className="mt-6">
-            {uploadFiles.length > 0 ? (
-              uploadFiles.map((file, index) => {
+            {files.getFiles.length > 0 ? (
+              files.getFiles.map((file, index) => {
                 return (
                   <div
                     key={index}
@@ -135,7 +144,18 @@ const UploadFiles = () => {
           </div>
 
           <div className="absolute bottom-7 w-[calc(100%_-_4.5rem)]">
-            <Button variant="contained" fullWidth size="large">
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={() => {
+                ChangeStep(1);
+                files.updateActiveFile({
+                  fileId: files.getFiles[0].id,
+                  pageIndex: 0,
+                });
+              }}
+            >
               Next
             </Button>
           </div>
@@ -145,4 +165,4 @@ const UploadFiles = () => {
   );
 };
 
-export default UploadFiles;
+export default observer(UploadFiles);
