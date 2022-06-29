@@ -72,7 +72,8 @@ class Files {
       fileId: this.files[0].id,
       pageId: this.files[0].pagesConditions[0].pageId,
     };
-    this.exportFiles = ExportFiles;
+    this.exportFiles = [];
+    this.exportFilesInfo = [];
     makeAutoObservable(this);
   }
 
@@ -86,6 +87,10 @@ class Files {
     this.getActiveFile.pagesConditions[
       this.getActivePageArrayIndex
     ].conditions = conditions;
+  }
+
+  updateExportFiles(exportFiles) {
+    this.exportFiles = exportFiles;
   }
 
   get getFiles() {
@@ -137,24 +142,28 @@ class Files {
   //   return this.activeFileIndex[type];
   // });
 
+  get getExportFilesInfo() {
+    return this.exportFilesInfo;
+  }
+
   // QUESTION: should i put it here?
-  get getExportFilesArray() {
-    let filesArray = [];
+  formatExportFilesInfo = computedFn(() => {
     this.files.map((file) => {
       file.pagesConditions.map((page) => {
         page.conditions.map((condition) => {
           //some?
           //If the condition has already existed in filesArray
           if (
-            filesArray.filter((file) => file.conditionId === condition.value)
-              .length > 0
+            this.exportFilesInfo.filter(
+              (file) => file.conditionId === condition.value
+            ).length > 0
           ) {
-            const targetFileIndex = filesArray
+            const targetFileIndex = this.exportFilesInfo
               .map((file) => file.conditionId)
               .indexOf(condition.value);
 
             // check if file is already in fileArray
-            let fileIsInArray = filesArray.some((condition) => {
+            let fileIsInArray = this.exportFilesInfo.some((condition) => {
               return condition.includedFiles.some((eachFile) => {
                 return eachFile.fileId === file.id;
               });
@@ -163,23 +172,23 @@ class Files {
             // console.log(fileIsInArray);
 
             if (fileIsInArray) {
-              const targetPageFileIndex = filesArray[
+              const targetPageFileIndex = this.exportFilesInfo[
                 targetFileIndex
               ].includedFiles
                 .map((eachFile) => eachFile.fileId)
                 .indexOf(file.id);
 
-              filesArray[targetFileIndex].includedFiles[
+              this.exportFilesInfo[targetFileIndex].includedFiles[
                 targetPageFileIndex
               ].pages = [
-                ...filesArray[targetFileIndex].includedFiles[
+                ...this.exportFilesInfo[targetFileIndex].includedFiles[
                   targetPageFileIndex
                 ].pages,
                 page.pageId,
               ];
             } else {
-              filesArray[targetFileIndex].includedFiles = [
-                ...filesArray[targetFileIndex].includedFiles,
+              this.exportFilesInfo[targetFileIndex].includedFiles = [
+                ...this.exportFilesInfo[targetFileIndex].includedFiles,
                 {
                   fileId: file.id,
                   file: file.file,
@@ -188,8 +197,8 @@ class Files {
               ];
             }
           } else {
-            filesArray = [
-              ...filesArray,
+            this.exportFilesInfo = [
+              ...this.exportFilesInfo,
               {
                 conditionName: condition.label,
                 conditionId: condition.value,
@@ -206,7 +215,11 @@ class Files {
         });
       });
     });
-    return filesArray;
+    return this.exportFilesInfo;
+  });
+
+  get getExportFiles() {
+    return this.exportFiles;
   }
 }
 

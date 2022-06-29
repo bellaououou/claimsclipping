@@ -27,9 +27,6 @@ const TagFiles = observer(({ ChangeStep }) => {
   );
   const [newConditions, setNewConditions] = useState([]);
 
-  // test
-  const [test, setTest] = useState("");
-  // end test
   useEffect(() => {}, []);
 
   // function onDocumentLoadSuccess(pdf, index) {
@@ -59,16 +56,35 @@ const TagFiles = observer(({ ChangeStep }) => {
     setNewConditions([]);
   };
 
+  // QUESTION: should i put this function here?
   const DownloadPdfs = async () => {
-    let pdfOutputs = [];
-
+    // files.formatExportFilesInfo.map((condition) => {
+    //   console.log(toJS(condition));
+    //   // final output pdf
+    //   condition.includedFiles.map((file) => {
+    //     console.log(toJS(file));
+    //     console.log(toJS(file.pages));
+    //     console.log(file.pages.length);
+    //     // each file
+    //     file.pages.map((page, index) => {
+    //       console.log(index);
+    //       console.log("how many times");
+    //       // ]);
+    //     });
+    //   });
+    // });
+    files.formatExportFilesInfo();
     await Promise.all(
-      files.getExportFilesArray.map(async (condition) => {
+      files.getExportFilesInfo.map(async (condition) => {
+        console.log(condition);
         // final output pdf
         const pdfOutput = await PDFDocument.create();
         pdfOutput.setTitle(condition.conditionName);
         await Promise.all(
           condition.includedFiles.map(async (file) => {
+            console.log(file);
+            // each file
+
             // input pdfs
             const existingPdfBytes = await FileToArrayBuffer(file.file);
             const pdfDoc = await PDFDocument.load(existingPdfBytes, {
@@ -76,9 +92,15 @@ const TagFiles = observer(({ ChangeStep }) => {
             });
             await Promise.all(
               file.pages.map(async (page) => {
+                console.log(page);
+                console.log("how many times");
+                // each page inside same file
+
                 const [existingPage] = await pdfOutput.copyPages(pdfDoc, [
                   files.getPageByPageAndFileId(file.fileId, page),
                 ]);
+                // const [existingPage] = await pdfOutput.copyPages(pdfDoc, [0]);
+
                 pdfOutput.addPage(existingPage);
               })
             );
@@ -86,11 +108,10 @@ const TagFiles = observer(({ ChangeStep }) => {
         );
 
         const pdfOutputUri = await pdfOutput.saveAsBase64({ dataUri: true });
-        setTest(pdfOutputUri);
-        pdfOutputs = [...pdfOutputs, pdfOutputUri];
+        files.updateExportFiles([...files.getExportFiles, pdfOutputUri]);
+        console.log(toJS(files.getExportFiles));
       })
     );
-    console.log(pdfOutputs);
   };
 
   return (
@@ -141,7 +162,6 @@ const TagFiles = observer(({ ChangeStep }) => {
                     key={index}
                     onClick={() => {
                       PageClick(page.pageId);
-                      console.log(page.pageId);
                     }}
                   >
                     <Document
@@ -311,10 +331,17 @@ const TagFiles = observer(({ ChangeStep }) => {
               )}
             </div>
             {/* end list */}
-            <iframe src={test}></iframe>
+            {files.getExportFiles.map((file) => {
+              return (
+                <>
+                  <iframe src={file}></iframe>
+                </>
+              );
+            })}
+            {/* <iframe src={test}></iframe>
             <a href={test} download>
               download
-            </a>
+            </a> */}
           </div>
 
           <div className="absolute left-9 bottom-7 w-[calc(100%_-_4.5rem)]">
@@ -342,8 +369,8 @@ const TagFiles = observer(({ ChangeStep }) => {
                 fullWidth
                 size="large"
                 onClick={() => {
-                  console.log(toJS(files.getFiles));
-                  console.log(files.getExportFilesArray);
+                  console.log(toJS(files.files));
+                  console.log(toJS(files.getExportFilesInfo));
                   DownloadPdfs();
                 }}
               >
