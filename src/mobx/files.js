@@ -8,7 +8,7 @@ import DemoPDF2 from "../docs/sample.pdf";
 
 const DataArray = [
   {
-    file: DemoPDF2,
+    file: DemoPDF,
     num: 2,
     name: "demo.pdf",
     id: uniqid(),
@@ -23,10 +23,18 @@ const DataArray = [
         pageId: uniqid(),
         conditions: [],
       },
+      {
+        pageId: uniqid(),
+        conditions: [],
+      },
+      {
+        pageId: uniqid(),
+        conditions: [],
+      },
     ],
   },
   {
-    file: DemoPDF,
+    file: DemoPDF2,
     num: 2,
     name: "demo2.pdf",
     id: uniqid(),
