@@ -1,4 +1,4 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, toJS } from "mobx";
 import { computedFn } from "mobx-utils";
 
 // DEMO DATA
@@ -75,11 +75,14 @@ const ExportFiles = [
 
 class Files {
   constructor() {
-    this.files = DataArray;
-    this.activeFileIndex = {
-      fileId: this.files[0].id,
-      pageId: this.files[0].pagesConditions[0].pageId,
-    };
+    this.files = [];
+    this.activeFileIndex =
+      this.files.length > 0
+        ? {
+            fileId: this.files[0].id,
+            pageId: this.files[0].pagesConditions[0].pageId,
+          }
+        : [];
     this.exportFiles = [];
     this.exportFilesInfo = [];
     makeAutoObservable(this);
@@ -114,6 +117,11 @@ class Files {
     return this.files.find((file) => file.id === this.activeFileIndex.fileId);
   }
 
+  get getActiveConditions() {
+    return this.getActiveFile.pagesConditions[this.getActivePageArrayIndex]
+      .conditions;
+  }
+
   get getActivePageArrayIndex() {
     return this.files[this.getActiveFileArrayIndex].pagesConditions
       .map((page) => page.pageId)
@@ -135,7 +143,6 @@ class Files {
   });
 
   getPageByPageAndFileId = computedFn((fileId, pageId) => {
-    console.log(this.getFileByFileId(fileId));
     return this.files[this.getFileByFileId(fileId)].pagesConditions
       .map((page) => page.pageId)
       .indexOf(pageId);
@@ -156,10 +163,10 @@ class Files {
 
   // QUESTION: should i put it here?
   formatExportFilesInfo = computedFn(() => {
+    this.exportFilesInfo = [];
     this.files.map((file) => {
       file.pagesConditions.map((page) => {
         page.conditions.map((condition) => {
-          //some?
           //If the condition has already existed in filesArray
           if (
             this.exportFilesInfo.filter(
@@ -171,13 +178,15 @@ class Files {
               .indexOf(condition.value);
 
             // check if file is already in fileArray
-            let fileIsInArray = this.exportFilesInfo.some((condition) => {
-              return condition.includedFiles.some((eachFile) => {
-                return eachFile.fileId === file.id;
-              });
-            });
 
-            // console.log(fileIsInArray);
+            // TODO: change to array, can be in multiple condiotns
+            let fileIsInArray = this.exportFilesInfo.some((eachCondition) => {
+              if (eachCondition.conditionId === condition.value) {
+                return eachCondition.includedFiles.some((eachFile) => {
+                  return eachFile.fileId === file.id;
+                });
+              }
+            });
 
             if (fileIsInArray) {
               const targetPageFileIndex = this.exportFilesInfo[
@@ -185,7 +194,6 @@ class Files {
               ].includedFiles
                 .map((eachFile) => eachFile.fileId)
                 .indexOf(file.id);
-
               this.exportFilesInfo[targetFileIndex].includedFiles[
                 targetPageFileIndex
               ].pages = [

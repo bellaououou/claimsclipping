@@ -157,6 +157,7 @@ const UploadFiles = ({ ChangeStep }) => {
               variant="contained"
               fullWidth
               size="large"
+              disabled={files.getFiles.length <= 0}
               onClick={() => {
                 ChangeStep(1);
                 files.updateActiveFile({

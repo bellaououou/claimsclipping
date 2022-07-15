@@ -12,7 +12,7 @@ import { files } from "../mobx/files";
 import { observer } from "mobx-react";
 
 const Home = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
 
   const ChangeStep = (step) => {
     setStep(step);
